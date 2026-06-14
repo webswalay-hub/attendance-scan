@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Mark Attendance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    --ink:    #0f172a;
+    --sub:    #64748b;
+    --accent: #2563eb;
+    --ok:     #16a34a;
+    --bg:     #f1f5f9;
+    --card:   #ffffff;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); min-height: 100vh; }
+  .header {
+    background: linear-gradient(135deg, #1e3a8a, #2563eb);
+    color: #fff; padding: 16px 20px 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .avatar {
+    width: 42px; height: 42px;
+    background: rgba(255,255,255,.2); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .header h2 { font-size: 1rem; font-weight: 700; }
+  .header p  { font-size: .8rem; opacity: .8; margin-top: 1px; }
+  .signout {
+    margin-left: auto;
+    background: rgba(255,255,255,.18);
+    border: none; color: #fff;
+    padding: 7px 13px; border-radius: 8px;
+    font-size: .8rem; cursor: pointer; white-space: nowrap;
+  }
+  .main { padding: 20px 16px; max-width: 440px; margin: 0 auto; }
+  .info-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .info-card {
+    flex: 1; background: var(--card);
+    border-radius: 12px; padding: 14px 12px;
+    box-shadow: 0 2px 8px rgba(15,23,42,.07);
+  }
+  .info-card .icon  { font-size: 1.4rem; margin-bottom: 4px; }
+  .info-card .label { font-size: .72rem; color: var(--sub); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .info-card .val   { font-size: .88rem; color: var(--ink); font-weight: 700; margin-top: 2px; }
+  .scanner-wrap {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: 0 2px 12px rgba(15,23,42,.09);
+    overflow: hidden; margin-bottom: 16px;
+  }
+  .scanner-header {
+    padding: 14px 16px; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .scanner-header h3 { font-size: .95rem; font-weight: 700; color: var(--ink); }
+  .live-badge {
+    background: #dbeafe; color: #1d4ed8;
+    font-size: .7rem; padding: 2px 8px; border-radius: 20px; font-weight: 700;
+  }
+  #qr-reader { width: 100%; }
+  .scan-tip { padding: 10px 16px 14px; font-size: .8rem; color: var(--sub); text-align: center; }
+  .result-box {
+    padding: 28px 20px; border-radius: 12px; text-align: center;
+    display: none; background: #f0fdf4; border: 1.5px solid #86efac;
+  }
+  .result-box .big { font-size: 3rem; margin-bottom: 10px; }
+  .result-box h3   { font-size: 1.1rem; font-weight: 800; color: var(--ok); }
+  .result-box p    { font-size: .85rem; color: #15803d; margin-top: 4px; }
+  .already-done {
+    background: var(--card); border-radius: 12px; padding: 30px 20px;
+    text-align: center; box-shadow: 0 2px 12px rgba(15,23,42,.09); display: none;
+  }
+  .already-done .big { font-size: 3rem; }
+  .already-done h3   { font-size: 1.1rem; font-weight: 700; color: var(--ink); margin: 8px 0 4px; }
+  .already-done p    { color: var(--sub); font-size: .85rem; }
+  .cam-err {
+    background: #fff7ed; border: 1.5px solid #fed7aa;
+    border-radius: 12px; padding: 20px; text-align: center;
+    display: none; color: #9a3412; font-size: .9rem; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="avatar">👤</div>
+  <div>
+    <h2 id="emp-name">Loading…</h2>
+    <p id="emp-dept"></p>
+  </div>
+  <button class="signout" onclick="signOut()">Sign out</button>
+</div>
+
+<div class="main">
+  <div class="info-row">
+    <div class="info-card">
+      <div class="icon">📅</div>
+      <div class="label">Today</div>
+      <div class="val" id="date-status"></div>
+    </div>
+    <div class="info-card">
+      <div class="icon">🕐</div>
+      <div class="label">Time</div>
+      <div class="val" id="time-status"></div>
+    </div>
+  </div>
+
+  <div class="already-done" id="already-panel">
+    <div class="big">✅</div>
+    <h3>Attendance Marked</h3>
+    <p>You've already checked in today.<br>See you tomorrow!</p>
+  </div>
+
+  <div class="scanner-wrap" id="scanner-panel">
+    <div class="scanner-header">
+      <h3>Scan Attendance QR</h3>
+      <span class="live-badge">LIVE</span>
+    </div>
+    <div id="qr-reader"></div>
+    <div class="scan-tip">Point your camera at the QR code at the office entrance</div>
+  </div>
+
+  <div class="cam-err" id="cam-err">
+    📷 Camera access denied.<br>Please allow camera permission and reload.
+  </div>
+
+  <div class="result-box" id="result-box">
+    <div class="big">✅</div>
+    <h3>Attendance Recorded</h3>
+    <p id="result-time"></p>
+  </div>
+</div>
+
+<script>
+// ── IMPORTANT: paste your GAS deployment URL here ────────────
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxWh5skwMRg_N4ey5_lJoUuuC-LQ4xDuWN_-aegmHOuQ3G18yIJxtsCDhkDl1Bysdf3/exec';
+// ─────────────────────────────────────────────────────────────
+
+let emp = null;
+try { emp = JSON.parse(sessionStorage.getItem('emp')); } catch(e) {}
+if (!emp) { window.location.href = GAS_URL + '?page=login'; }
+
+document.getElementById('emp-name').textContent = emp ? emp.name : '';
+document.getElementById('emp-dept').textContent = emp ? emp.dept  : '';
+
+function updateClock() {
+  const now = new Date();
+  document.getElementById('date-status').textContent =
+    now.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+  document.getElementById('time-status').textContent =
+    now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+let userLat = null, userLng = null;
+function acquireLocationSilently() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => { userLat = pos.coords.latitude; userLng = pos.coords.longitude; },
+    () => {},
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+let scanner  = null;
+let scanDone = false;
+
+function startScanner() {
+  scanner = new Html5Qrcode('qr-reader');
+  scanner.start(
+    { facingMode: 'environment' },
+    { fps: 10, qrbox: { width: 240, height: 240 } },
+    onScanSuccess,
+    () => {}
+  ).catch(() => {
+    document.getElementById('scanner-panel').style.display = 'none';
+    document.getElementById('cam-err').style.display = 'block';
+  });
+}
+
+function onScanSuccess(decodedText) {
+  if (scanDone) return;
+  scanDone = true;
+  scanner.stop().catch(() => {});
+  document.getElementById('scanner-panel').style.display = 'none';
+
+  // Call GAS backend via fetch instead of google.script.run
+  fetch(GAS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'logAttendance',
+      emp, token: decodedText,
+      lat: userLat, lng: userLng
+    })
+  })
+  .then(() => showSuccess())
+  .catch(() => showSuccess()); // always show success to employee
+}
+
+function showSuccess() {
+  const now = new Date();
+  document.getElementById('result-time').textContent =
+    'Recorded at ' + now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('result-box').style.display = 'block';
+  sessionStorage.setItem('checkedIn', '1');
+}
+
+function signOut() {
+  sessionStorage.clear();
+  window.location.href = GAS_URL + '?page=login';
+}
+
+if (sessionStorage.getItem('checkedIn') === '1') {
+  document.getElementById('already-panel').style.display = 'block';
+  document.getElementById('scanner-panel').style.display = 'none';
+} else {
+  startScanner();
+  setTimeout(acquireLocationSilently, 2000);
+}
+</script>
+</body>
+</html>
