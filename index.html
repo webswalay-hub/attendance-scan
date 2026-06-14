@@ -211,10 +211,33 @@ function onScanSuccess(decodedText) {
     lng:   userLng || ''
   });
 
-  // Use no-cors mode to bypass CORS restriction
-  fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
-    .then(() => showSuccess())
-    .catch(() => showSuccess());
+  // Wait up to 5 seconds for location before logging
+  function doLog() {
+    const params = new URLSearchParams({
+      page:  'log',
+      emp:   encodeURIComponent(JSON.stringify(emp)),
+      token: decodedText,
+      lat:   userLat || '',
+      lng:   userLng || ''
+    });
+    fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
+      .then(() => showSuccess())
+      .catch(() => showSuccess());
+  }
+
+  if (userLat) {
+    doLog();
+  } else {
+    // Location not ready yet — wait up to 5s
+    let waited = 0;
+    const locWait = setInterval(() => {
+      waited += 500;
+      if (userLat || waited >= 5000) {
+        clearInterval(locWait);
+        doLog();
+      }
+    }, 500);
+  }
 }
 
 function showSuccess() {
@@ -234,8 +257,8 @@ if (sessionStorage.getItem('checkedIn') === '1') {
   document.getElementById('already-panel').style.display = 'block';
   document.getElementById('scanner-panel').style.display = 'none';
 } else {
-  startScanner();
-  setTimeout(acquireLocationSilently, 2000);
+  acquireLocationSilently(); // ask location immediately
+  startScanner();            // then start camera
 }
 </script>
 </body>
