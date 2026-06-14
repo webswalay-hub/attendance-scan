@@ -203,18 +203,18 @@ function onScanSuccess(decodedText) {
   scanner.stop().catch(() => {});
   document.getElementById('scanner-panel').style.display = 'none';
 
-  // Call GAS backend via fetch instead of google.script.run
-  fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'logAttendance',
-      emp, token: decodedText,
-      lat: userLat, lng: userLng
-    })
-  })
-  .then(() => showSuccess())
-  .catch(() => showSuccess()); // always show success to employee
+  // Use GET request to avoid CORS issues with GAS
+  const params = new URLSearchParams({
+    page:  'log',
+    emp:   encodeURIComponent(JSON.stringify(emp)),
+    token: decodedText,
+    lat:   userLat  || '',
+    lng:   userLng  || ''
+  });
+
+  fetch(GAS_URL + '?' + params.toString())
+    .then(() => showSuccess())
+    .catch(() => showSuccess());
 }
 
 function showSuccess() {
