@@ -141,7 +141,21 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxWh5skwMRg_N4ey5_lJoUu
 // ─────────────────────────────────────────────────────────────
 
 let emp = null;
-try { emp = JSON.parse(sessionStorage.getItem('emp')); } catch(e) {}
+
+// Try URL param first (coming from GAS login)
+try {
+  const urlParams = new URLSearchParams(window.location.search);
+  const empParam = urlParams.get('emp');
+  if (empParam) {
+    emp = JSON.parse(decodeURIComponent(empParam));
+    sessionStorage.setItem('emp', JSON.stringify(emp));
+    // Clean URL without reloading
+    window.history.replaceState({}, '', window.location.pathname);
+  } else {
+    emp = JSON.parse(sessionStorage.getItem('emp'));
+  }
+} catch(e) {}
+
 if (!emp) { window.location.href = GAS_URL + '?page=login'; }
 
 document.getElementById('emp-name').textContent = emp ? emp.name : '';
