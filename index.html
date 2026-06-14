@@ -203,16 +203,16 @@ function onScanSuccess(decodedText) {
   scanner.stop().catch(() => {});
   document.getElementById('scanner-panel').style.display = 'none';
 
-  // Use GET request to avoid CORS issues with GAS
   const params = new URLSearchParams({
     page:  'log',
     emp:   encodeURIComponent(JSON.stringify(emp)),
     token: decodedText,
-    lat:   userLat  || '',
-    lng:   userLng  || ''
+    lat:   userLat || '',
+    lng:   userLng || ''
   });
 
-  fetch(GAS_URL + '?' + params.toString())
+  // Use no-cors mode to bypass CORS restriction
+  fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
     .then(() => showSuccess())
     .catch(() => showSuccess());
 }
