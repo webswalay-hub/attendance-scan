@@ -111,9 +111,9 @@
   </div>
 
   <div class="already-done" id="already-panel">
-    <div class="big">✅</div>
-    <h3>Attendance Marked</h3>
-    <p>You've already checked in today.<br>See you tomorrow!</p>
+    <div class="big">👋</div>
+    <h3>All Done for Today!</h3>
+    <p>You've checked in and out.<br>See you tomorrow!</p>
   </div>
 
   <div class="scanner-wrap" id="scanner-panel">
@@ -130,8 +130,8 @@
   </div>
 
   <div class="result-box" id="result-box">
-    <div class="big">✅</div>
-    <h3>Attendance Recorded</h3>
+    <div class="big" id="result-icon">✅</div>
+    <h3 id="result-title">Attendance Recorded</h3>
     <p id="result-time"></p>
   </div>
 
@@ -237,9 +237,18 @@ function onScanSuccess(decodedText) {
       lat:   userLat || '',
       lng:   userLng || ''
     });
-    fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
-      .then(() => showSuccess())
-      .catch(() => showSuccess());
+    // Use regular fetch to get response action (checkin vs checkout)
+    fetch(GAS_URL + '?' + params.toString())
+      .then(r => r.text())
+      .then(text => {
+        try {
+          const res = JSON.parse(text);
+          showSuccess(res.action);
+        } catch(e) {
+          showSuccess('checkin');
+        }
+      })
+      .catch(() => showSuccess('checkin'));
   }
 
   if (userLat) {
@@ -257,12 +266,22 @@ function onScanSuccess(decodedText) {
   }
 }
 
-function showSuccess() {
+function showSuccess(action) {
   const now = new Date();
-  document.getElementById('result-time').textContent =
-    'Recorded at ' + now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  if (action === 'checkout') {
+    document.getElementById('result-icon').textContent  = '👋';
+    document.getElementById('result-title').textContent = 'Checked Out Successfully';
+    document.getElementById('result-time').textContent  = 'Checked out at ' + timeStr;
+    sessionStorage.setItem('checkedIn', '2'); // 2 = fully done
+  } else {
+    document.getElementById('result-icon').textContent  = '✅';
+    document.getElementById('result-title').textContent = 'Checked In Successfully';
+    document.getElementById('result-time').textContent  = 'Checked in at ' + timeStr;
+    sessionStorage.setItem('checkedIn', '1'); // 1 = checked in, can checkout
+    scanDone = false; // allow second scan for checkout
+  }
   document.getElementById('result-box').style.display = 'block';
-  sessionStorage.setItem('checkedIn', '1');
 }
 
 function signOut() {
@@ -307,12 +326,23 @@ function submitChangePassword() {
     });
 }
 
-if (sessionStorage.getItem('checkedIn') === '1') {
+const checkedInState = sessionStorage.getItem('checkedIn');
+if (checkedInState === '2') {
+  // Fully done (checked out)
   document.getElementById('already-panel').style.display = 'block';
   document.getElementById('scanner-panel').style.display = 'none';
+} else if (checkedInState === '1') {
+  // Checked in — show scanner again for checkout
+  document.getElementById('already-panel').style.display = 'none';
+  document.getElementById('scanner-panel').style.display = 'block';
+  // Update tip text
+  document.querySelector('.scan-tip').textContent = 'Scan QR code again to check out';
+  document.querySelector('.live-badge').textContent = 'CHECK-OUT';
+  acquireLocationSilently();
+  startScanner();
 } else {
-  acquireLocationSilently(); // ask location immediately
-  startScanner();            // then start camera
+  acquireLocationSilently();
+  startScanner();
 }
 </script>
 </body>
