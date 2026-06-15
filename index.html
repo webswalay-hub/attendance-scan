@@ -220,6 +220,18 @@ function onScanSuccess(decodedText) {
   scanner.stop().catch(() => {});
   document.getElementById('scanner-panel').style.display = 'none';
 
+  // Wait up to 8 seconds for location then log
+  let waited = 0;
+  const locWait = setInterval(() => {
+    waited += 500;
+    if (userLat || waited >= 8000) {
+      clearInterval(locWait);
+      doLog(decodedText);
+    }
+  }, 500);
+}
+
+function doLog(decodedText) {
   const params = new URLSearchParams({
     page:  'log',
     emp:   encodeURIComponent(JSON.stringify(emp)),
@@ -228,61 +240,26 @@ function onScanSuccess(decodedText) {
     lng:   userLng || ''
   });
 
-  // Wait up to 5 seconds for location before logging
-  function doLog() {
-    const params = new URLSearchParams({
-      page:  'log',
-      emp:   encodeURIComponent(JSON.stringify(emp)),
-      token: decodedText,
-      lat:   userLat || '',
-      lng:   userLng || ''
-    });
-    // Use regular fetch to get response action (checkin vs checkout)
-    fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
-      .then(() => {
-        // Can't read response in no-cors — check via separate status call
-        setTimeout(() => checkLastAction(), 2000);
-      })
-      .catch(() => showResult('error'));
+  // Fire the log (no-cors, can't read response)
+  fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' }).catch(() => {});
 
-  function checkLastAction() {
-    const statusParams = new URLSearchParams({
+  // After 3s, poll laststatus to find out what happened
+  setTimeout(() => {
+    const checkParams = new URLSearchParams({
       page:  'laststatus',
       empId: emp.id
     });
-    // Send log with no-cors (fire and forget)
-    fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
-      .catch(() => {});
-
-    // Poll a readable proxy endpoint to get the result
-    setTimeout(() => {
-      const checkParams = new URLSearchParams({
-        page:  'laststatus',
-        empId: emp.id
-      });
-      fetch(GAS_URL + '?' + checkParams.toString())
-        .then(r => r.json())
-        .then(res => {
-          if (res.ok === true) {
-            showSuccess(res.action);
-          } else {
-            showResult('error');
-          }
-        })
-        .catch(() => showResult('error'));
-    }, 3000);
-  }
-  }
-
-  // Wait up to 8 seconds for location
-  let waited = 0;
-  const locWait = setInterval(() => {
-    waited += 500;
-    if (userLat || waited >= 8000) {
-      clearInterval(locWait);
-      doLog();
-    }
-  }, 500);
+    fetch(GAS_URL + '?' + checkParams.toString())
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok === true) {
+          showSuccess(res.action);
+        } else {
+          showResult('error');
+        }
+      })
+      .catch(() => showResult('error'));
+  }, 3000);
 }
 
 function showSuccess(action) {
