@@ -250,19 +250,27 @@ function onScanSuccess(decodedText) {
       page:  'laststatus',
       empId: emp.id
     });
-    fetch(GAS_URL + '?' + statusParams.toString())
-      .then(r => r.text())
-      .then(text => {
-        try {
-          const res = JSON.parse(text);
-          if (res.success === true) {
+    // Send log with no-cors (fire and forget)
+    fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
+      .catch(() => {});
+
+    // Poll a readable proxy endpoint to get the result
+    setTimeout(() => {
+      const checkParams = new URLSearchParams({
+        page:  'laststatus',
+        empId: emp.id
+      });
+      fetch(GAS_URL + '?' + checkParams.toString())
+        .then(r => r.json())
+        .then(res => {
+          if (res.ok === true) {
             showSuccess(res.action);
           } else {
             showResult('error');
           }
-        } catch(e) { showResult('error'); }
-      })
-      .catch(() => showResult('error'));
+        })
+        .catch(() => showResult('error'));
+    }, 3000);
   }
   }
 
