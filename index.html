@@ -266,37 +266,63 @@ function onScanSuccess(decodedText) {
   }
   }
 
-  if (userLat) {
-    doLog();
-  } else {
-    // Location not ready yet — wait up to 5s
-    let waited = 0;
-    const locWait = setInterval(() => {
-      waited += 500;
-      if (userLat || waited >= 5000) {
-        clearInterval(locWait);
-        doLog();
-      }
-    }, 500);
-  }
+  // Wait up to 8 seconds for location
+  let waited = 0;
+  const locWait = setInterval(() => {
+    waited += 500;
+    if (userLat || waited >= 8000) {
+      clearInterval(locWait);
+      doLog();
+    }
+  }, 500);
 }
 
 function showSuccess(action) {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const box = document.getElementById('result-box');
+  box.style.background   = '';
+  box.style.borderColor  = '';
   if (action === 'checkout') {
     document.getElementById('result-icon').textContent  = '👋';
     document.getElementById('result-title').textContent = 'Checked Out Successfully';
     document.getElementById('result-time').textContent  = 'Checked out at ' + timeStr;
-    sessionStorage.setItem('checkedIn', '2'); // 2 = fully done
+    sessionStorage.setItem('checkedIn', '2');
   } else {
     document.getElementById('result-icon').textContent  = '✅';
     document.getElementById('result-title').textContent = 'Checked In Successfully';
     document.getElementById('result-time').textContent  = 'Checked in at ' + timeStr;
-    sessionStorage.setItem('checkedIn', '1'); // 1 = checked in, can checkout
-    scanDone = false; // allow second scan for checkout
+    sessionStorage.setItem('checkedIn', '1');
+    scanDone = false;
+    // Re-show scanner after 3 seconds for potential checkout later
+    setTimeout(() => {
+      box.style.display = 'none';
+      document.getElementById('scanner-panel').style.display = 'block';
+      document.querySelector('.scan-tip').textContent = 'Scan QR code again when leaving to check out';
+      document.querySelector('.live-badge').textContent = 'CHECK-OUT';
+      startScanner();
+    }, 3000);
   }
-  document.getElementById('result-box').style.display = 'block';
+  box.style.display = 'block';
+}
+
+function showResult(type) {
+  const box = document.getElementById('result-box');
+  if (type === 'error') {
+    box.style.background  = '#fff7ed';
+    box.style.borderColor = '#fed7aa';
+    document.getElementById('result-icon').textContent  = '❌';
+    document.getElementById('result-title').style.color = '#9a3412';
+    document.getElementById('result-title').textContent = 'Scan Unsuccessful';
+    document.getElementById('result-time').textContent  = 'Please try again or contact admin.';
+    box.style.display = 'block';
+    // Reset scanner after 3 seconds
+    setTimeout(() => {
+      box.style.display = 'none';
+      scanDone = false;
+      startScanner();
+    }, 3000);
+  }
 }
 
 function signOut() {
