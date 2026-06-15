@@ -255,7 +255,7 @@ function onScanSuccess(decodedText) {
       .then(text => {
         try {
           const res = JSON.parse(text);
-          if (res.status === 'VALID') {
+          if (res.success === true) {
             showSuccess(res.action);
           } else {
             showResult('error');
