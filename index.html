@@ -238,17 +238,32 @@ function onScanSuccess(decodedText) {
       lng:   userLng || ''
     });
     // Use regular fetch to get response action (checkin vs checkout)
-    fetch(GAS_URL + '?' + params.toString())
+    fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' })
+      .then(() => {
+        // Can't read response in no-cors — check via separate status call
+        setTimeout(() => checkLastAction(), 2000);
+      })
+      .catch(() => showResult('error'));
+
+  function checkLastAction() {
+    const statusParams = new URLSearchParams({
+      page:  'laststatus',
+      empId: emp.id
+    });
+    fetch(GAS_URL + '?' + statusParams.toString())
       .then(r => r.text())
       .then(text => {
         try {
           const res = JSON.parse(text);
-          showSuccess(res.action);
-        } catch(e) {
-          showSuccess('checkin');
-        }
+          if (res.status === 'VALID') {
+            showSuccess(res.action);
+          } else {
+            showResult('error');
+          }
+        } catch(e) { showResult('error'); }
       })
-      .catch(() => showSuccess('checkin'));
+      .catch(() => showResult('error'));
+  }
   }
 
   if (userLat) {
