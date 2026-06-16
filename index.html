@@ -173,7 +173,7 @@ try {
   }
 } catch(e) {}
 
-if (!emp) { window.location.href = GAS_URL + '?page=login'; }
+if (!emp) { window.location.href = GAS_URL + '?page=login'; throw new Error('no session'); }
 
 document.getElementById('emp-name').textContent = emp ? emp.name : '';
 document.getElementById('emp-dept').textContent = emp ? emp.dept  : '';
@@ -366,10 +366,6 @@ function submitChangePassword() {
 // Always start scanner — state is managed per-scan not per-session
 acquireLocationSilently();
 startScanner();
- else {
-  acquireLocationSilently();
-  startScanner();
-}
 </script>
 </body>
 </html>
