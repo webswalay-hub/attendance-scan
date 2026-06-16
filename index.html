@@ -266,24 +266,35 @@ function showSuccess(action) {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   const box = document.getElementById('result-box');
-  box.style.background   = '';
-  box.style.borderColor  = '';
+  box.style.background  = '#f0fdf4';
+  box.style.borderColor = '#86efac';
+  document.getElementById('result-title').style.color = '#16a34a';
+
   if (action === 'checkout') {
     document.getElementById('result-icon').textContent  = '👋';
-    document.getElementById('result-title').textContent = 'Checked Out Successfully';
+    document.getElementById('result-title').textContent = 'Checked Out';
     document.getElementById('result-time').textContent  = 'Checked out at ' + timeStr;
-    sessionStorage.setItem('checkedIn', '2');
-  } else {
-    document.getElementById('result-icon').textContent  = '✅';
-    document.getElementById('result-title').textContent = 'Checked In Successfully';
-    document.getElementById('result-time').textContent  = 'Checked in at ' + timeStr;
-    sessionStorage.setItem('checkedIn', '1');
-    scanDone = false;
-    // Re-show scanner after 3 seconds for potential checkout later
+    sessionStorage.setItem('checkedIn', '0');
+    // Always re-show scanner after checkout — employee may come back after break
     setTimeout(() => {
       box.style.display = 'none';
+      scanDone = false;
       document.getElementById('scanner-panel').style.display = 'block';
-      document.querySelector('.scan-tip').textContent = 'Scan QR code again when leaving to check out';
+      document.querySelector('.scan-tip').textContent = 'Scan QR code to check in again after break';
+      document.querySelector('.live-badge').textContent = 'CHECK-IN';
+      startScanner();
+    }, 3000);
+  } else {
+    document.getElementById('result-icon').textContent  = '✅';
+    document.getElementById('result-title').textContent = 'Checked In';
+    document.getElementById('result-time').textContent  = 'Checked in at ' + timeStr;
+    sessionStorage.setItem('checkedIn', '1');
+    // Re-show scanner for checkout
+    setTimeout(() => {
+      box.style.display = 'none';
+      scanDone = false;
+      document.getElementById('scanner-panel').style.display = 'block';
+      document.querySelector('.scan-tip').textContent = 'Scan QR code when leaving';
       document.querySelector('.live-badge').textContent = 'CHECK-OUT';
       startScanner();
     }, 3000);
@@ -352,20 +363,9 @@ function submitChangePassword() {
     });
 }
 
-const checkedInState = sessionStorage.getItem('checkedIn');
-if (checkedInState === '2') {
-  // Fully done (checked out)
-  document.getElementById('already-panel').style.display = 'block';
-  document.getElementById('scanner-panel').style.display = 'none';
-} else if (checkedInState === '1') {
-  // Checked in — show scanner again for checkout
-  document.getElementById('already-panel').style.display = 'none';
-  document.getElementById('scanner-panel').style.display = 'block';
-  // Update tip text
-  document.querySelector('.scan-tip').textContent = 'Scan QR code again to check out';
-  document.querySelector('.live-badge').textContent = 'CHECK-OUT';
-  acquireLocationSilently();
-  startScanner();
+// Always start scanner — state is managed per-scan not per-session
+acquireLocationSilently();
+startScanner();
 } else {
   acquireLocationSilently();
   startScanner();
