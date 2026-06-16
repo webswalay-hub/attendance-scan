@@ -63,6 +63,7 @@
   }
   #qr-reader { width: 100%; }
   #qr-reader video { transform: scaleX(1) !important; }
+  #qr-reader img   { transform: scaleX(1) !important; }
   .scan-tip { padding: 10px 16px 14px; font-size: .8rem; color: var(--sub); text-align: center; }
   .result-box {
     padding: 28px 20px; border-radius: 12px; text-align: center;
@@ -210,9 +211,17 @@ function startScanner() {
     onScanSuccess,
     () => {}
   ).then(() => {
-    // Fix mirror effect — rear camera should not be flipped
-    const video = document.querySelector('#qr-reader video');
-    if (video) video.style.transform = 'scaleX(1)';
+    // Force-fix mirror on all media elements the library injects
+    const fixMirror = () => {
+      document.querySelectorAll('#qr-reader video, #qr-reader img, #qr-reader canvas')
+        .forEach(el => {
+          el.style.setProperty('transform', 'scaleX(1)', 'important');
+        });
+    };
+    fixMirror();
+    // Re-apply after a tick in case the library re-injects elements
+    setTimeout(fixMirror, 500);
+    setTimeout(fixMirror, 1500);
   }).catch(() => {
     document.getElementById('scanner-panel').style.display = 'none';
     document.getElementById('cam-err').style.display = 'block';
