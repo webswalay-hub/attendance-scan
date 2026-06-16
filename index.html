@@ -254,6 +254,8 @@ function doLog(decodedText) {
       .then(res => {
         if (res.ok === true) {
           showSuccess(res.action);
+        } else if (res.action === 'done') {
+          showResult('done');
         } else {
           showResult('error');
         }
@@ -304,7 +306,18 @@ function showSuccess(action) {
 
 function showResult(type) {
   const box = document.getElementById('result-box');
-  if (type === 'error') {
+  if (type === 'done') {
+    box.style.background  = '#f0fdf4';
+    box.style.borderColor = '#86efac';
+    document.getElementById('result-icon').textContent  = '👋';
+    document.getElementById('result-title').style.color = '#16a34a';
+    document.getElementById('result-title').textContent = 'See You Tomorrow!';
+    document.getElementById('result-time').textContent  = 'All scans for today are complete.';
+    box.style.display = 'block';
+    // Hide scanner permanently for today
+    document.getElementById('scanner-panel').style.display = 'none';
+    sessionStorage.setItem('doneFoToday', new Date().toDateString());
+  } else if (type === 'error') {
     box.style.background  = '#fff7ed';
     box.style.borderColor = '#fed7aa';
     document.getElementById('result-icon').textContent  = '❌';
@@ -312,7 +325,6 @@ function showResult(type) {
     document.getElementById('result-title').textContent = 'Scan Unsuccessful';
     document.getElementById('result-time').textContent  = 'Please try again or contact admin.';
     box.style.display = 'block';
-    // Reset scanner after 3 seconds
     setTimeout(() => {
       box.style.display = 'none';
       scanDone = false;
@@ -363,9 +375,29 @@ function submitChangePassword() {
     });
 }
 
-// Always start scanner — state is managed per-scan not per-session
-acquireLocationSilently();
-startScanner();
+// Check if all 4 scans already done today (persists across refresh/signin)
+const doneDate = sessionStorage.getItem('doneFoToday');
+if (doneDate === new Date().toDateString()) {
+  document.getElementById('scanner-panel').style.display = 'none';
+  document.getElementById('already-panel').style.display = 'block';
+} else {
+  // Also check server-side on load
+  const initParams = new URLSearchParams({ page: 'laststatus', empId: emp.id });
+  fetch(GAS_URL + '?' + initParams.toString())
+    .then(r => r.json())
+    .then(res => {
+      if (res.action === 'done') {
+        showResult('done');
+      } else {
+        acquireLocationSilently();
+        startScanner();
+      }
+    })
+    .catch(() => {
+      acquireLocationSilently();
+      startScanner();
+    });
+}
 </script>
 </body>
 </html>
