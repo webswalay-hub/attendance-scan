@@ -433,28 +433,8 @@ function submitChangePassword() {
 }
 
 // Check if all 4 scans already done today (persists across refresh/signin)
-const doneDate = sessionStorage.getItem('doneFoToday');
-if (doneDate === new Date().toDateString()) {
-  document.getElementById('scanner-panel').style.display = 'none';
-  document.getElementById('already-panel').style.display = 'block';
-} else {
-  // Also check server-side on load
-  const initParams = new URLSearchParams({ page: 'laststatus', empId: emp.id });
-  fetch(GAS_URL + '?' + initParams.toString())
-    .then(r => r.json())
-    .then(res => {
-      if (res.action === 'done') {
-        showResult('done');
-      } else {
-        acquireLocationSilently();
-        startScanner();
-      }
-    })
-    .catch(() => {
-      acquireLocationSilently();
-      startScanner();
-    });
-}
+acquireLocationSilently();
+startScanner();
 </script>
 </body>
 </html>
