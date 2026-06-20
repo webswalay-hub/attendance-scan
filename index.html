@@ -311,6 +311,7 @@ function pollLastStatus() {
 }
 
 function showSuccess(action) {
+  loadWhoIsIn(); // refresh immediately on scan success
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   const box = document.getElementById('result-box');
@@ -351,6 +352,7 @@ function showSuccess(action) {
 }
 
 function showResult(type) {
+  loadWhoIsIn(); // refresh on any scan result
   const box = document.getElementById('result-box');
   if (type === 'done') {
     box.style.background  = '#f0fdf4';
