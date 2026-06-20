@@ -263,18 +263,21 @@ function doLog(decodedText) {
     lng:   userLng || ''
   });
 
-  // Fire the log (no-cors, can't read response)
-  fetch(GAS_URL + '?' + params.toString(), { mode: 'no-cors' }).catch(() => {});
+  // Show a processing indicator immediately
+  const box = document.getElementById('result-box');
+  box.style.background  = '#f8fafc';
+  box.style.borderColor = '#e2e8f0';
+  document.getElementById('result-icon').textContent  = '⏳';
+  document.getElementById('result-title').style.color = '#64748b';
+  document.getElementById('result-title').textContent = 'Processing…';
+  document.getElementById('result-time').textContent  = '';
+  box.style.display = 'block';
 
-  // After 3s, poll laststatus to find out what happened
-  setTimeout(() => {
-    const checkParams = new URLSearchParams({
-      page:  'laststatus',
-      empId: emp.id
-    });
-    fetch(GAS_URL + '?' + checkParams.toString())
-      .then(r => r.json())
-      .then(res => {
+  fetch(GAS_URL + '?' + params.toString(), { redirect: 'follow' })
+    .then(r => r.text())
+    .then(text => {
+      try {
+        const res = JSON.parse(text);
         if (res.ok === true) {
           showSuccess(res.action);
         } else if (res.action === 'done') {
@@ -282,9 +285,29 @@ function doLog(decodedText) {
         } else {
           showResult('error');
         }
-      })
-      .catch(() => showResult('error'));
-  }, 3000);
+      } catch(ex) {
+        // If JSON parse fails, fall back to laststatus
+        pollLastStatus();
+      }
+    })
+    .catch(() => pollLastStatus());
+}
+
+function pollLastStatus() {
+  const checkParams = new URLSearchParams({
+    page:  'laststatus',
+    empId: emp.id
+  });
+  fetch(GAS_URL + '?' + checkParams.toString())
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok === true) {
+        showSuccess(res.action);
+      } else {
+        showResult('error');
+      }
+    })
+    .catch(() => showResult('error'));
 }
 
 function showSuccess(action) {
